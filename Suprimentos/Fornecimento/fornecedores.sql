@@ -1,0 +1,77 @@
+SELECT 
+    FO.NRORG,
+    FO.CDFORNECED,
+    ED.DSENDEFORN,
+    ED.NMBAIRFORN,
+    ED.NRCEPFORN,
+    ED.SGESTADO,
+    FO.IDTPIJURFORN,
+    FO.NRINSJURFORN,
+    FO.NMRAZSOCFORN,
+    FO.NMFANTFORN,
+    FO.CDTIPOFORN AS TIPO_FORNECEDOR,
+    FO.CDGRUPFORN AS GRUPO_FORNECEDOR,
+    CASE 
+        WHEN FO.IdTpDescForn = 'B' THEN 'BONIFICAÇÃO'
+        WHEN FO.IdTpDescForn = 'C' THEN 'COMERCIAL'
+        WHEN FO.IdTpDescForn = 'S' THEN 'SEM DESCONTO'
+        ELSE 'Não definido'
+    END AS TIPO_DESCONTO,
+    FO.VRPEDESCFORN,
+    CASE
+        WHEN FO.IDTPFORPGTFO = 'V' THEN
+            '( ' || FOPG.NMFORMPGTO || ' )'
+        WHEN FO.IDTPFORPGTFO = 'F' THEN
+            'Pagamento fixo no dia ' ||
+            TO_CHAR(FO.NRDIAPGFIXFO) ||
+            ' com ' ||
+            TO_CHAR(FO.NRPARCPGTOFO) ||
+            CASE
+                WHEN FO.IDUTDIAPGTFO = 'E'
+                    THEN ' parcela(s), 1ª no próximo mês'
+                ELSE
+                    ' parcela(s)'
+            END
+        ELSE
+            'Sem forma de pagamento definida'
+    END
+    || ' - ' ||
+    LISTAGG(
+        DISTINCT TO_CHAR(PRAZ.NRDIASPGTOFO) ||
+        ' - ' ||
+        TO_CHAR(PRAZ.VRPERCPGTOFO) || '%',
+        ' | '
+    ) WITHIN GROUP (
+        ORDER BY PRAZ.NRDIASPGTOFO
+    ) AS FORMA_PAGTO,
+    FO.DTCADAFORN,
+    TO_DATE('20000101', 'YYYYMMDD') AS DATA_API
+FROM FORNECEDOR FO
+LEFT JOIN FORMPGTO FOPG
+    ON FO.CDFORMPGTO = FOPG.CDFORMPGTO
+LEFT JOIN PRAZOPGTFORN PRAZ
+    ON FO.CDFORNECED = PRAZ.CDFORNECED
+LEFT JOIN ENDEFORN ED 
+    ON ED.CDFORNECED = FO.CDFORNECED
+WHERE FO.IDSITUCADA = 'A'
+GROUP BY
+    FO.NRORG,
+    FO.CDFORNECED,
+    ED.DSENDEFORN,
+    ED.NMBAIRFORN,
+    ED.NRCEPFORN,
+    ED.SGESTADO,
+    FO.IDTPIJURFORN,
+    FO.NRINSJURFORN,
+    FO.NMRAZSOCFORN,
+    FO.NMFANTFORN,
+    FO.CDTIPOFORN,
+    FO.CDGRUPFORN,
+    FO.IdTpDescForn,
+    FO.VRPEDESCFORN,
+    FO.IDTPFORPGTFO,
+    FOPG.NMFORMPGTO,
+    FO.NRDIAPGFIXFO,
+    FO.NRPARCPGTOFO,
+    FO.IDUTDIAPGTFO,
+    FO.DTCADAFORN
